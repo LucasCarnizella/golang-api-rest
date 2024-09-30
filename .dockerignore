@@ -1,0 +1,9 @@
+# Docker files
+docker-compose.yml
+Dockerfile
+
+# Markdowns
+*.md
+
+# Environment Variables
+.env*
