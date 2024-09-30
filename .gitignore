@@ -22,3 +22,6 @@ go.work
 
 # Environment Variables
 .env
+
+# JetBrains IDE
+.idea
