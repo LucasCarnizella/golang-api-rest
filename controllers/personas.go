@@ -2,19 +2,31 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/LucasCarnizella/golang-api-rest/database"
 	"github.com/LucasCarnizella/golang-api-rest/models"
 	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 )
 
 func ReadAllPersonas(w http.ResponseWriter, r *http.Request) {
 	var personas []models.Persona
+	var err error
 
-	database.DB.Find(&personas)
+	err = database.DB.Find(&personas).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Record not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "", http.StatusInternalServerError)
+		}
+		return
+	}
 
-	err := json.NewEncoder(w).Encode(personas)
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(personas)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -27,30 +39,54 @@ func CreatePersona(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&persona)
 	if err != nil {
 		log.Panic(err)
+		return
 	}
 
 	if persona.Name == "" || persona.Story == "" {
-		log.Panic("One of the variables is an empty string.")
+		http.Error(w, "One of the parameters is an empty string", http.StatusBadRequest)
+		return
 	}
 
-	database.DB.Create(&persona)
+	err = database.DB.Create(&persona).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Record not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "", http.StatusInternalServerError)
+		}
+		return
+	}
 
+	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(persona)
 	if err != nil {
 		log.Panic(err)
+		return
 	}
 }
 
 func ReadPersona(w http.ResponseWriter, r *http.Request) {
 	var persona models.Persona
+	var err error
 
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	database.DB.First(&persona, id)
-	err := json.NewEncoder(w).Encode(persona)
+	err = database.DB.First(&persona, id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Record not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(persona)
 	if err != nil {
 		log.Panic(err)
+		return
 	}
 }
 
@@ -61,37 +97,56 @@ func UpdatePersona(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	database.DB.First(&persona, id)
+	err = database.DB.First(&persona, id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Record not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "", http.StatusInternalServerError)
+		}
+		return
+	}
 
 	err = json.NewDecoder(r.Body).Decode(&persona)
 	if err != nil {
 		log.Panic(err)
+		return
 	}
 
 	if persona.Name == "" || persona.Story == "" {
-		log.Panic("One of the variables is an empty string.")
+		http.Error(w, "One of the parameters is an empty string", http.StatusBadRequest)
+		return
 	}
 
-	database.DB.Save(&persona)
-
-	err = json.NewEncoder(w).Encode(&persona)
+	err = database.DB.Save(&persona).Error
 	if err != nil {
-		log.Panic(err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Record not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "", http.StatusInternalServerError)
+		}
+		return
 	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func DeletePersona(w http.ResponseWriter, r *http.Request) {
 	var persona models.Persona
+	var err error
 
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	database.DB.First(&persona, id)
-
-	err := json.NewEncoder(w).Encode(persona)
+	err = database.DB.Delete(&persona, id).Error
 	if err != nil {
-		log.Panic(err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Record not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "", http.StatusInternalServerError)
+		}
+		return
 	}
 
-	database.DB.Delete(&persona, id)
+	w.WriteHeader(http.StatusNoContent)
 }
